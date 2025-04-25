@@ -1,0 +1,46 @@
+name: Generate Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      subjects:
+        description: 'List of D&D subjects to generate images for (one per line)'
+        required: true
+        type: string
+        default: |
+          Ancient Red Dragon
+          Heavy crossbow 
+          Aboleth
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          
+      - name: Create subjects file
+        run: |
+          echo "${{ github.event.inputs.subjects }}" > subjects.txt
+          
+      - name: Build CLI
+        run: go build -o dndimg cmd/dndimg/main.go
+        env:
+          CGO_ENABLED: 0
+          
+      - name: Generate images
+        run: ./dndimg -f subjects.txt
+        env:
+          OPEN_AI_TOKEN: ${{ secrets.OPEN_AI_TOKEN }}
+          
+      - name: Upload images
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-images
+          path: output/*.png
+          if-no-files-found: error
+          retention-days: 7 
