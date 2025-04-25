@@ -102,12 +102,80 @@ Beholder
 Mind Flayer
 ```
 
+You can also use different delimiters by setting the `SUBJECTS_DELIMITER` environment variable:
+
+```bash
+# For comma-separated values
+SUBJECTS_DELIMITER=, dndimg -f subjects.csv
+
+# For semicolon-separated values
+SUBJECTS_DELIMITER=; dndimg -f subjects.txt
+
+# For newline-separated values (default)
+SUBJECTS_DELIMITER=\n dndimg -f subjects.txt
+```
+
 The tool will:
 1. Process each subject in sequence
 2. Respect API rate limits (1 request per 20 seconds)
 3. Show progress for each subject
 4. Continue processing if any subject fails
 5. Provide a summary of successful and failed subjects
+
+## GitHub Actions
+
+You can use this tool in GitHub Actions to automatically generate images. Here's an example workflow:
+
+```yaml
+name: Generate D&D Images
+on:
+  workflow_dispatch:
+    inputs:
+      subjects:
+        description: 'Subjects to generate images for (comma or semicolon separated)'
+        required: true
+        type: string
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+          
+      - name: Install dndimg
+        run: go install github.com/5e-bits/dndimg@latest
+        
+      - name: Generate Images
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUBJECTS_DELIMITER: ','  # or ';' for semicolon-separated values
+        run: |
+          echo "${{ github.event.inputs.subjects }}" > subjects.txt
+          dndimg -f subjects.txt
+          
+      - name: Upload Images
+        uses: actions/upload-artifact@v4
+        with:
+          name: dnd-images
+          path: "*.png"
+```
+
+To use this workflow:
+1. Add your OpenAI API key as a repository secret named `OPENAI_API_KEY`
+2. Go to the Actions tab in your repository
+3. Select the "Generate D&D Images" workflow
+4. Click "Run workflow"
+5. Enter your subjects as a comma-separated list (e.g., "Ancient Red Dragon, Beholder, Mind Flayer") or semicolon-separated list (e.g., "Ancient Red Dragon; Beholder; Mind Flayer")
+6. Click "Run workflow" to start the process
+
+The generated images will be available as artifacts in the workflow run.
+
+Note: Using comma or semicolon delimiters is recommended for GitHub Actions as they work better with the workflow input format than newlines. Make sure to set the `SUBJECTS_DELIMITER` environment variable to match your chosen delimiter (',' or ';').
 
 ## Examples
 

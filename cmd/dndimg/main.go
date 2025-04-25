@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -80,37 +78,19 @@ func run() error {
 		return fmt.Errorf("either a subject or subjects file must be provided")
 	}
 
-	// Read subjects from file
-	file, err := os.Open(cli.SubjectsFile)
+	// Read subjects from file using config
+	subjects, err := cfg.ProcessSubjectsFile(cli.SubjectsFile)
 	if err != nil {
-		return fmt.Errorf("failed to open subjects file: %w", err)
+		return fmt.Errorf("failed to process subjects file: %w", err)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	totalSubjects := 0
+	totalSubjects := len(subjects)
 	successfulSubjects := 0
-
-	// Count total subjects first
-	for scanner.Scan() {
-		if strings.TrimSpace(scanner.Text()) != "" {
-			totalSubjects++
-		}
-	}
-
-	// Reset file pointer
-	file.Seek(0, 0)
-	scanner = bufio.NewScanner(file)
 
 	log.Info("Starting batch processing", "total_subjects", totalSubjects)
 
 	// Process each subject
-	for scanner.Scan() {
-		subject := strings.TrimSpace(scanner.Text())
-		if subject == "" {
-			continue
-		}
-
+	for _, subject := range subjects {
 		// Wait for rate limiter
 		<-rateLimiter
 
@@ -121,10 +101,6 @@ func run() error {
 
 		successfulSubjects++
 		log.Info("Progress", "completed", successfulSubjects, "total", totalSubjects)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading subjects file: %w", err)
 	}
 
 	log.Info("Batch processing complete",
