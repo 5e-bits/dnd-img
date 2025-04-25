@@ -38,7 +38,7 @@ jobs:
         run: ./dndimg -f subjects.txt
         env:
           OPEN_AI_TOKEN: ${{ secrets.OPEN_AI_TOKEN }}
-          DELIMITER: ${{ github.event.inputs.delimiter }}
+          SUBJECTS_DELIMITER: ${{ github.event.inputs.delimiter }}
           
       - name: Upload images
         uses: actions/upload-artifact@v4
