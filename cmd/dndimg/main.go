@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -16,7 +18,8 @@ import (
 )
 
 type CLI struct {
-	Subject string `arg:"" help:"The D&D subject to generate an image for"`
+	Subject      string `arg:"" optional:"" help:"The D&D subject to generate an image for"`
+	SubjectsFile string `short:"f" help:"Path to a file containing newline-delimited subjects"`
 }
 
 func run() error {
@@ -38,26 +41,96 @@ func run() error {
 	promptGen := prompt.NewOpenAIGenerator(client, cfg.SystemPrompt, cfg.WebSearchPrompt)
 	imageGen := image.NewOpenAIGenerator(client)
 
-	// Step 1: Generate prompt
-	log.Info("Generating detailed description...")
-	prompt, err := promptGen.Generate(ctx, cli.Subject)
-	if err != nil {
-		return fmt.Errorf("failed to generate prompt: %w", err)
+	// Create a rate limiter (1 request per 20 seconds to be safe)
+	rateLimiter := time.Tick(20 * time.Second)
+
+	// Function to process a single subject
+	processSubject := func(subject string) error {
+		// Step 1: Generate prompt
+		log.Info("Generating detailed description...", "subject", subject)
+		prompt, err := promptGen.Generate(ctx, subject)
+		if err != nil {
+			return fmt.Errorf("failed to generate prompt for %s: %w", subject, err)
+		}
+
+		// Step 2: Generate image
+		log.Info("Creating image...", "subject", subject)
+		imageData, err := imageGen.Generate(ctx, prompt)
+		if err != nil {
+			return fmt.Errorf("failed to generate image for %s: %w", subject, err)
+		}
+
+		// Step 3: Save image
+		log.Info("Saving image...", "subject", subject)
+		filename := fmt.Sprintf("%s.png", formatFilename(subject))
+		if err := imageGen.SaveImage(imageData, filename); err != nil {
+			return fmt.Errorf("failed to save image for %s: %w", subject, err)
+		}
+
+		return nil
 	}
 
-	// Step 2: Generate image
-	log.Info("Creating image...")
-	imageData, err := imageGen.Generate(ctx, prompt)
-	if err != nil {
-		return fmt.Errorf("failed to generate image: %w", err)
+	// Handle single subject case
+	if cli.Subject != "" {
+		return processSubject(cli.Subject)
 	}
 
-	// Step 3: Save image
-	log.Info("Saving image...")
-	filename := fmt.Sprintf("%s.png", formatFilename(cli.Subject))
-	if err := imageGen.SaveImage(imageData, filename); err != nil {
-		return fmt.Errorf("failed to save image: %w", err)
+	// Handle subjects file case
+	if cli.SubjectsFile == "" {
+		return fmt.Errorf("either a subject or subjects file must be provided")
 	}
+
+	// Read subjects from file
+	file, err := os.Open(cli.SubjectsFile)
+	if err != nil {
+		return fmt.Errorf("failed to open subjects file: %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	totalSubjects := 0
+	successfulSubjects := 0
+
+	// Count total subjects first
+	for scanner.Scan() {
+		if strings.TrimSpace(scanner.Text()) != "" {
+			totalSubjects++
+		}
+	}
+
+	// Reset file pointer
+	file.Seek(0, 0)
+	scanner = bufio.NewScanner(file)
+
+	log.Info("Starting batch processing", "total_subjects", totalSubjects)
+
+	// Process each subject
+	for scanner.Scan() {
+		subject := strings.TrimSpace(scanner.Text())
+		if subject == "" {
+			continue
+		}
+
+		// Wait for rate limiter
+		<-rateLimiter
+
+		if err := processSubject(subject); err != nil {
+			log.Error("Failed to process subject", "subject", subject, "error", err)
+			continue
+		}
+
+		successfulSubjects++
+		log.Info("Progress", "completed", successfulSubjects, "total", totalSubjects)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading subjects file: %w", err)
+	}
+
+	log.Info("Batch processing complete",
+		"successful", successfulSubjects,
+		"total", totalSubjects,
+		"failed", totalSubjects-successfulSubjects)
 
 	return nil
 }

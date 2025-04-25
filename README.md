@@ -9,6 +9,8 @@ A command-line tool for generating D&D SRD subject images using AI. This tool cr
 - Save images in PNG format
 - Command-line interface for easy use
 - Configurable through environment variables
+- Batch processing of multiple subjects
+- Rate limiting to respect API limits
 
 ## Installation
 
@@ -72,6 +74,8 @@ WEB_SEARCH_PROMPT=your_custom_web_search_prompt_here
 
 ## Usage
 
+### Single Subject Mode
+
 Generate an image for any D&D subject:
 
 ```bash
@@ -82,6 +86,28 @@ The tool will:
 1. Generate a detailed description of the subject
 2. Create an image based on the description
 3. Save the image as a PNG file in the current directory
+
+### Batch Processing Mode
+
+Process multiple subjects from a file:
+
+```bash
+dndimg -f subjects.txt
+```
+
+Where `subjects.txt` contains one subject per line:
+```
+Ancient Red Dragon
+Beholder
+Mind Flayer
+```
+
+The tool will:
+1. Process each subject in sequence
+2. Respect API rate limits (1 request per 20 seconds)
+3. Show progress for each subject
+4. Continue processing if any subject fails
+5. Provide a summary of successful and failed subjects
 
 ## Examples
 
@@ -94,6 +120,9 @@ dndimg "Brown Bear"
 
 # Generate an image of a spell
 dndimg "Chill touch"
+
+# Process multiple subjects from a file
+dndimg -f subjects.txt
 ```
 
 ## Development
