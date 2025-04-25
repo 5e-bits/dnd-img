@@ -14,17 +14,19 @@ import (
 )
 
 const (
-	PROMPT_IMAGE_GENERATION = `Create a high-quality digital painting in the style of 90s D&D catalog art with these specifications:
+	PROMPT_IMAGE_GENERATION = `Create a high-quality hand-painted digital illustration in the style of 90s D&D catalog art with these specifications:
 - Aspect ratio: 1:1
-- Style: Hand-painted, high-fantasy illustration
+- Style: Traditional hand-painted illustration with visible brush strokes and artistic texture
+- Medium: Digital painting that mimics traditional oil or acrylic techniques
 - Subject: Clear, isolated depiction of the requested subject
 - Lighting: Dramatic, atmospheric lighting with strong contrast
 - Composition: Centered, clear presentation of the subject
-- Details: Rich textures, intricate details in the subject
+- Details: Rich textures, visible brushwork, and traditional painting techniques
 - Color palette: Rich, saturated colors typical of 90s fantasy art
 - Background: Simple, dark or atmospheric background that doesn't distract from the subject
 - Mood: Mysterious, powerful, or iconic depending on the subject
-- Quality: Professional illustration quality suitable for a D&D catalog`
+- Quality: Professional hand-painted illustration quality suitable for a D&D catalog
+- Technique: Emphasize traditional painting methods, visible brush strokes, and artistic texture rather than photographic realism`
 )
 
 // Generator defines the interface for image generation
@@ -48,11 +50,10 @@ func NewOpenAIGenerator(client *openai.Client) *OpenAIGenerator {
 // Generate creates an image using OpenAI's API
 func (g *OpenAIGenerator) Generate(ctx context.Context, prompt string) (string, error) {
 	req := openai.ImageRequest{
-		Prompt:         prompt,
-		Model:          openai.CreateImageModelDallE3,
-		Size:           openai.CreateImageSize1024x1024,
-		ResponseFormat: openai.CreateImageResponseFormatB64JSON,
-		N:              1,
+		Prompt: prompt,
+		Model:  "gpt-image-1",
+		Size:   openai.CreateImageSize1024x1024,
+		N:      1,
 	}
 
 	resp, err := g.client.CreateImage(ctx, req)

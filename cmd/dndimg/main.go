@@ -35,7 +35,7 @@ func run() error {
 	ctx := context.Background()
 
 	// Initialize generators
-	promptGen := prompt.NewOpenAIGenerator(client, cfg.SystemPrompt)
+	promptGen := prompt.NewOpenAIGenerator(client, cfg.SystemPrompt, cfg.WebSearchPrompt)
 	imageGen := image.NewOpenAIGenerator(client)
 
 	// Step 1: Generate prompt

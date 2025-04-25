@@ -7,18 +7,6 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-const (
-	PROMPT_SYSTEM     = `You are an expert in Dungeons & Dragons art direction, specializing in the iconic 90s TSR catalog style. Your task is to create focused, clear descriptions that depict individual D&D subjects (items, monsters, weapons, spells, etc.) in a way that would fit perfectly in a D&D catalog or rulebook. Focus on clear, isolated depictions that showcase the subject's key features while maintaining the dramatic, high-fantasy aesthetic of classic TSR-era artwork.`
-	PROMPT_WEB_SEARCH = `Research and analyze this D&D subject, focusing on:
-1. Core visual characteristics and defining features
-2. Historical context and significance in D&D lore
-3. Typical appearance and key details
-4. Common interactions or effects (if applicable)
-5. Key artistic elements from 90s D&D catalog style (clear composition, dramatic lighting, rich textures)
-
-Generate a detailed description that would serve as a perfect prompt for creating a piece of art that could have appeared in a 90s D&D catalog or rulebook.`
-)
-
 // Generator defines the interface for prompt generation
 type Generator interface {
 	Generate(ctx context.Context, subject string) (string, error)
@@ -26,15 +14,17 @@ type Generator interface {
 
 // OpenAIGenerator implements the Generator interface using OpenAI's API
 type OpenAIGenerator struct {
-	client       *openai.Client
-	systemPrompt string
+	client          *openai.Client
+	systemPrompt    string
+	webSearchPrompt string
 }
 
 // NewOpenAIGenerator creates a new OpenAI prompt generator
-func NewOpenAIGenerator(client *openai.Client, systemPrompt string) *OpenAIGenerator {
+func NewOpenAIGenerator(client *openai.Client, systemPrompt string, webSearchPrompt string) *OpenAIGenerator {
 	return &OpenAIGenerator{
-		client:       client,
-		systemPrompt: systemPrompt,
+		client:          client,
+		systemPrompt:    systemPrompt,
+		webSearchPrompt: webSearchPrompt,
 	}
 }
 
@@ -43,7 +33,7 @@ func (g *OpenAIGenerator) Generate(ctx context.Context, subject string) (string,
 	resp, err := g.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: openai.GPT4oMini20240718,
+			Model: openai.GPT4o,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
@@ -51,7 +41,7 @@ func (g *OpenAIGenerator) Generate(ctx context.Context, subject string) (string,
 				},
 				{
 					Role:    openai.ChatMessageRoleUser,
-					Content: PROMPT_WEB_SEARCH + "\nSubject: " + subject,
+					Content: g.webSearchPrompt + "\nSubject: " + subject,
 				},
 			},
 		},
