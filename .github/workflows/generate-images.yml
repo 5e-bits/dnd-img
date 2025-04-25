@@ -4,13 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       subjects:
-        description: 'List of D&D subjects to generate images for (one per line)'
+        description: 'List of D&D subjects to generate images for (semicolon-separated)'
         required: true
         type: string
-        default: |
-          Ancient Red Dragon
-          Heavy crossbow 
-          Aboleth
+        default: 'Ancient Red Dragon;Heavy crossbow;Aboleth'
+      delimiter:
+        description: 'Delimiter to use for separating subjects'
+        required: false
+        type: string
+        default: ';'
 
 jobs:
   generate:
@@ -36,6 +38,7 @@ jobs:
         run: ./dndimg -f subjects.txt
         env:
           OPEN_AI_TOKEN: ${{ secrets.OPEN_AI_TOKEN }}
+          DELIMITER: ${{ github.event.inputs.delimiter }}
           
       - name: Upload images
         uses: actions/upload-artifact@v4
